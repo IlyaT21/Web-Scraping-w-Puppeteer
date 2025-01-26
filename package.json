@@ -1,0 +1,15 @@
+{
+  "name": "web-scraping-w-puppeteer",
+  "version": "1.0.0",
+  "description": "Web Scraping practice project with puppeteer",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^24.1.1"
+  }
+}
