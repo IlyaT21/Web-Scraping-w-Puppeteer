@@ -1,29 +1,48 @@
 import puppeteer from "puppeteer";
-// Or import puppeteer from 'puppeteer-core';
 
 // Launch the browser and open a new blank page
-const browser = await puppeteer.launch();
+const browser = await puppeteer.launch({
+  headless: false,
+  defaultViewport: false,
+});
 const page = await browser.newPage();
 
-// Navigate the page to a URL.
-await page.goto("https://developer.chrome.com/");
+// Navigate the london Craigslist page
+await page.goto("https://london.craigslist.org/");
 
-// Set screen size.
-await page.setViewport({ width: 1080, height: 1024 });
+// Select all job listings in London
+await page.locator('a[data-alltitle="all jobs"]').click();
 
-// Type into search box.
-await page.locator(".devsite-search-field").fill("automate beyond recorder");
+// Wait for all elements to load
+await page.waitForSelector(".cl-search-result .cl-app-anchor");
+//Take all elements
+const elements = await page.$$(".cl-search-result .cl-app-anchor");
 
-// Wait and click on first result.
-await page.locator(".devsite-result-item-link").click();
+for (let i = 0; i < elements.length; i++) {
+  // Get the current element (use `locator.nth(i)` for better handling with Puppeteer v20+)
+  const element = elements[i];
 
-// Locate the full title with a unique string.
-const textSelector = await page
-  .locator("text/Customize and automate")
-  .waitHandle();
-const fullTitle = await textSelector?.evaluate((el) => el.textContent);
+  // Wait for navigation when clicking
+  await Promise.all([
+    element.click(),
+    page.waitForNavigation({ waitUntil: "domcontentloaded" }),
+  ]);
 
-// Print the full title.
-console.log('The title of this blog post is "%s".', fullTitle);
+  // Extract inner text of `.postingtitletext`
+  await page.waitForSelector(".postingtitletext");
+  const postingTitle = await page.$eval(".postingtitletext", (el) =>
+    el.textContent.trim()
+  );
 
-await browser.close();
+  console.log(`Posting Title ${i + 1}:`, postingTitle);
+
+  // Navigate back to the previous page
+  await page.goBack({ waitUntil: "networkidle2" });
+
+  // Wait for elements to reappear before proceeding to the next iteration
+  await page.waitForSelector(".cl-search-result .cl-app-anchor");
+}
+
+console.log("Inner texts:", elements);
+
+// await browser.close();
