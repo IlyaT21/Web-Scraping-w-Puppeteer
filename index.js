@@ -1,4 +1,5 @@
 import puppeteer from "puppeteer";
+import { writeFile } from "fs/promises";
 
 // Launch the browser and open a new blank page
 const browser = await puppeteer.launch({
@@ -23,6 +24,9 @@ const elements = await page.$$(
 // List of all the emperors after filtering the elements array
 let emperors = [];
 
+// Initiate variable for file writing
+const data = [];
+
 // Filter and log only <a> elements with innerText of 4 characters or less
 for (let i = 0; i < elements.length; i++) {
   const innerText = await elements[i].evaluate((el) => el.innerText.trim());
@@ -32,12 +36,8 @@ for (let i = 0; i < elements.length; i++) {
   }
 }
 
-for (let i = 0; i < emperors.length; i++) {
-  console.log(`Processing Emperor ${i + 1}...`);
-
+for (let i = 0; i < 3; i++) {
   // Click on the element
-  const href = await emperors[i].evaluate((el) => el.getAttribute("href"));
-  console.log(`Emperor ${i + 1} href: ${href}`);
   await emperors[i].click();
 
   // Wait for the .infobox-above element to load on the new page
@@ -50,17 +50,22 @@ for (let i = 0; i < emperors.length; i++) {
 
   // Log the extracted text
   console.log(`Emperor ${i + 1}: .infobox-above Text = "${infoboxText}"`);
+  data.push(infoboxText);
 
   // Go back to the previous page to process the next emperor
   await page.goBack();
 
-  // Ensure the emperors are reloaded (if necessary) after navigating back
-  // await page.waitForSelector(
-  //   'th[style="text-align:center; background:#F8F9FA"] a'
-  // );
   emperors = await page.$$(
     'th[style="text-align:center; background:#F8F9FA"] a[title]'
   );
+}
+
+// Write the data to a file
+try {
+  await writeFile("output.txt", data.join("\n"));
+  console.log("Data written to output.txt successfully!");
+} catch (err) {
+  console.error("Error writing to file:", err);
 }
 
 // await browser.close();
