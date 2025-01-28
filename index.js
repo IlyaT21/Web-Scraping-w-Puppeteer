@@ -12,46 +12,55 @@ await page.goto("https://en.wikipedia.org/wiki/List_of_Roman_emperors");
 
 // Wait for all <a> elements inside <th> with specific style to load
 await page.waitForSelector(
-  'th[style="text-align:center; background:#F8F9FA"] a'
+  'th[style="text-align:center; background:#F8F9FA"] a[title]'
 );
 
 // Take all matching <a> elements
 const elements = await page.$$(
-  'th[style="text-align:center; background:#F8F9FA"] a'
+  'th[style="text-align:center; background:#F8F9FA"] a[title]'
 );
 
-// Filter and log only <a> elements with innerText of 2 characters or less
+// List of all the emperors after filtering the elements array
+let emperors = [];
+
+// Filter and log only <a> elements with innerText of 4 characters or less
 for (let i = 0; i < elements.length; i++) {
   const innerText = await elements[i].evaluate((el) => el.innerText.trim());
 
   if (innerText.length > 4) {
-    console.log(`Element ${i + 1}: Text = "${innerText}"`);
+    emperors.push(elements[i]);
   }
 }
 
-// for (let i = 0; i < elements.length; i++) {
-//   // Get the current element (use `locator.nth(i)` for better handling with Puppeteer v20+)
-//   const element = elements[i];
+for (let i = 0; i < emperors.length; i++) {
+  console.log(`Processing Emperor ${i + 1}...`);
 
-//   // Wait for navigation when clicking
-//   await Promise.all([
-//     element.click(),
-//     page.waitForNavigation({ waitUntil: "domcontentloaded" }),
-//   ]);
+  // Click on the element
+  const href = await emperors[i].evaluate((el) => el.getAttribute("href"));
+  console.log(`Emperor ${i + 1} href: ${href}`);
+  await emperors[i].click();
 
-//   // Extract inner text of `.mw-page-title-main`
-//   await page.waitForSelector(".mw-page-title-main");
-//   const postingTitle = await page.$eval(".mw-page-title-main", (el) =>
-//     el.textContent.trim()
-//   );
+  // Wait for the .infobox-above element to load on the new page
+  await page.waitForSelector(".infobox-above");
 
-//   console.log(`Posting Title ${i + 1}:`, postingTitle);
+  // Extract the innerText of the .infobox-above element
+  const infoboxText = await page.$eval(".infobox-above", (el) =>
+    el.innerText.trim()
+  );
 
-//   // Navigate back to the previous page
-//   await page.goBack({ waitUntil: "networkidle2" });
+  // Log the extracted text
+  console.log(`Emperor ${i + 1}: .infobox-above Text = "${infoboxText}"`);
 
-//   // Wait for elements to reappear before proceeding to the next iteration
-//   await page.waitForSelector("td .mw-file-description");
-// }
+  // Go back to the previous page to process the next emperor
+  await page.goBack();
+
+  // Ensure the emperors are reloaded (if necessary) after navigating back
+  // await page.waitForSelector(
+  //   'th[style="text-align:center; background:#F8F9FA"] a'
+  // );
+  emperors = await page.$$(
+    'th[style="text-align:center; background:#F8F9FA"] a[title]'
+  );
+}
 
 // await browser.close();
