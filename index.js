@@ -1,5 +1,6 @@
 import puppeteer from "puppeteer";
-import { writeFile } from "fs/promises";
+import fs from "fs";
+import PDFDocument from "pdfkit";
 
 // Launch the browser and open a new blank page
 const browser = await puppeteer.launch({
@@ -24,8 +25,18 @@ const elements = await page.$$(
 // List of all the emperors after filtering the elements array
 let emperors = [];
 
-// Initiate variable for file writing
-const data = [];
+// Create a single PDF document
+const pdfDoc = new PDFDocument();
+const pdfFileName = "all_roman_emperors.pdf";
+
+// Write the PDF to a file
+pdfDoc.pipe(fs.createWriteStream(pdfFileName));
+
+// Add a title to the PDF
+pdfDoc
+  .fontSize(16)
+  .text("Roman Emperors", { underline: true, align: "center" })
+  .moveDown();
 
 // Filter and log only <a> elements with innerText of 4 characters or less
 for (let i = 0; i < elements.length; i++) {
@@ -36,36 +47,62 @@ for (let i = 0; i < elements.length; i++) {
   }
 }
 
+// Loop through the Emperors
 for (let i = 0; i < 3; i++) {
   // Click on the element
   await emperors[i].click();
 
-  // Wait for the .infobox-above element to load on the new page
-  await page.waitForSelector(".infobox-above");
+  // Wait for the table to load
+  await page.waitForSelector("table.infobox.vcard");
 
-  // Extract the innerText of the .infobox-above element
-  const infoboxText = await page.$eval(".infobox-above", (el) =>
-    el.innerText.trim()
-  );
+  // Take all rows
+  const rows = await page.$$("table.infobox.vcard tr");
 
-  // Log the extracted text
-  console.log(`Emperor ${i + 1}: .infobox-above Text = "${infoboxText}"`);
-  data.push(infoboxText);
+  // Iterate through each row and extract data from <th> and <td>
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+
+    // Initialize variables for the row data
+    let thText = "";
+    let tdText = "";
+
+    // Check for <th> and extract its text
+    const thExists = await row.$("th");
+    if (thExists) {
+      thText = await row.$eval("th", (th) => th.innerText.trim());
+    }
+
+    // Check for <td> and extract its text
+    const tdExists = await row.$("td");
+    if (tdExists) {
+      tdText = await row.$eval("td", (td) => td.innerText.trim());
+    }
+
+    // Log the results
+    console.log(`Row ${i + 1}:`);
+    console.log(`  TH: ${thText}`);
+    console.log(`  TD: ${tdText}`);
+
+    // Add the row's data to the PDF
+    pdfDoc
+      .fontSize(10)
+      .text(`${thText}`, { underline: true })
+      .moveDown(0.5)
+      .text(`${tdText}`)
+      .moveDown(1);
+  }
 
   // Go back to the previous page to process the next emperor
   await page.goBack();
 
+  // Refresh the emperors list since the page was reloaded
   emperors = await page.$$(
     'th[style="text-align:center; background:#F8F9FA"] a[title]'
   );
 }
 
-// Write the data to a file
-try {
-  await writeFile("output.txt", data.join("\n"));
-  console.log("Data written to output.txt successfully!");
-} catch (err) {
-  console.error("Error writing to file:", err);
-}
+// Finalize the PDF
+pdfDoc.end();
+console.log(`PDF created successfully: ${pdfFileName}`);
 
 // await browser.close();
