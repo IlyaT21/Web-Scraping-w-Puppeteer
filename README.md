@@ -29,14 +29,14 @@ A practice project demonstrating web scraping techniques using [Puppeteer](https
 
 ## Usage
 
-1. **Run the Script:**:
+1. **Run the Script:**
 
    ```sh
    npm start
 
    ```
 
-2. **Observe Output:**The script will perform web scraping tasks as defined in index.js and output the results to the console or save them as specified.
+2. **Observe Output:** The script will perform web scraping tasks as defined in index.js and output the results to the console or save them as specified.
 
 ## Project Structure
 
